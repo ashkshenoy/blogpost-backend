@@ -5,6 +5,7 @@ import com.example.techblog.dto.BlogPostDto;
 import com.example.techblog.dto.BlogPostMapper;
 import com.example.techblog.dto.CommentDto;
 import com.example.techblog.dto.CreatePostRequest;
+import com.example.techblog.dto.LikeResponse;
 import com.example.techblog.model.BlogPost;
 import com.example.techblog.model.Category;
 import com.example.techblog.model.Comment;
@@ -14,6 +15,7 @@ import com.example.techblog.model.User;
 import com.example.techblog.repository.BlogPostRepository;
 import com.example.techblog.repository.CategoryRepository;
 import com.example.techblog.repository.CommentRepository;
+import com.example.techblog.repository.LikeRepository;
 import com.example.techblog.repository.TagRepository;
 import com.example.techblog.repository.UserRepository;
 
@@ -44,8 +46,19 @@ public class BlogPostServiceImpl implements BlogPostService {
     private final TagRepository tagRepo;
     private final UserRepository userRepo;
     private final CommentRepository commentRepo;
-    
-    
+    private final LikeRepository likeRepo;
+   
+    public List<BlogPostDto> getAllPosts(String username) {
+        List<BlogPost> posts = postRepo.findAll();
+        return posts.stream()
+                .map(post -> {
+                    BlogPostDto dto = BlogPostMapper.toDto(post);
+                    dto.setHasLiked(post.getLikes().stream()
+                        .anyMatch(like -> like.getUser().getUsername().equals(username)));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
     @Autowired
     AIService aiService;
     @Override
@@ -138,13 +151,7 @@ public class BlogPostServiceImpl implements BlogPostService {
         return BlogPostMapper.toDto(post);
     }
 
-    @Override
-    public List<BlogPostDto> getAllPosts() {
-        return postRepo.findAll().stream()
-                .map(BlogPostMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
+   
     @Override
     public BlogPostDto updatePost(Long id, CreatePostRequest request) {
         BlogPost post = postRepo.findById(id)
@@ -201,56 +208,41 @@ public class BlogPostServiceImpl implements BlogPostService {
                     .collect(Collectors.toList());
     }
     @Override
-    @Transactional
-    public void likePost(Long postId, String username) {
+    public void deleteComment(Long postId, Long commentId, String username) {
+        // Retrieve the post to ensure it exists
         BlogPost post = postRepo.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        User user = userRepo.findByUsername(username);
-        if (user == null) {
-            throw new RuntimeException("User not found");
-        }
-        
-        
-        boolean hasLiked = post.getLikes().stream()
-                .anyMatch(like -> like.getUser().equals(user));
-        
-        if (!hasLiked) {
-            Like like = new Like();
-            like.setPost(post);
-            like.setUser(user);
-            post.getLikes().add(like);
-            postRepo.save(post);
-        }
-    }
+            .orElseThrow(() -> new RuntimeException("Post not found"));
 
-    @Override
-    @Transactional
-    public void unlikePost(Long postId, String username) {
-        BlogPost post = postRepo.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        User user = userRepo.findByUsername(username);
-        
-        post.getLikes().removeIf(like -> like.getUser().equals(user));
-        postRepo.save(post);
-    }
+        // Retrieve the comment to be deleted
+        Comment comment = commentRepo.findById(commentId)
+            .orElseThrow(() -> new RuntimeException("Comment not found"));
 
-    // ...exi
+        // Ensure the comment belongs to the post
+        if (!comment.getPost().getId().equals(postId)) {
+            throw new RuntimeException("Comment does not belong to the specified post");
+        }
+
+        // Check if the user is the author of the comment
+        if (!comment.getAuthor().getUsername().equals(username)) {
+            throw new RuntimeException("You are not authorized to delete this comment");
+        }
+
+        // Delete the comment
+        commentRepo.delete(comment);
+    }
     
-    @Override
-    public BlogPostDto generateAIPost(AIPostRequest request, String authorUsername) {
-        User author = userRepo.findByUsername(authorUsername);
-
-        String aiContent = aiService.generatePost(request.getPrompt());
-
-        BlogPost post = new BlogPost();
-        post.setTitle(request.getTitle());
-        post.setContent(aiContent);
-        post.setAuthor(author);
-        post.setCreatedAt(LocalDateTime.now());
-
-        postRepo.save(post);
-        return BlogPostMapper.toDto(post);
-    }
+	/*
+	 * @Override public BlogPostDto generateAIPost(AIPostRequest request, String
+	 * authorUsername) { User author = userRepo.findByUsername(authorUsername);
+	 * 
+	 * String aiContent = aiService.generatePost(request.getPrompt());
+	 * 
+	 * BlogPost post = new BlogPost(); post.setTitle(request.getTitle());
+	 * post.setContent(aiContent); post.setAuthor(author);
+	 * post.setCreatedAt(LocalDateTime.now());
+	 * 
+	 * postRepo.save(post); return BlogPostMapper.toDto(post); }
+	 */
     
     @Override
     public Page<BlogPostDto> searchPosts(String query, Long categoryId, Long tagId, int page, int size) {

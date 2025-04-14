@@ -55,11 +55,10 @@ public class OpenAIApiService implements AIService {
         return Collections.emptyList();
     }
     
-    @Override
-    public String generatePost(String prompt) {
-        Map<String, String> request = Map.of("prompt", prompt);
-        ResponseEntity<String> response = restTemplate.postForEntity(
-            aiServiceUrl + "/generate", request, String.class);
-        return response.getBody();
-    }
+	/*
+	 * @Override public String generatePost(String prompt) { Map<String, String>
+	 * request = Map.of("prompt", prompt); ResponseEntity<String> response =
+	 * restTemplate.postForEntity( aiServiceUrl + "/generate", request,
+	 * String.class); return response.getBody(); }
+	 */
 }

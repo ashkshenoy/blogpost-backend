@@ -2,7 +2,7 @@
 package com.example.techblog.model;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +30,17 @@ public class BlogPost {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+    
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Comment> comments = new HashSet<>();
 
+    public Set<Comment> getComments() {
+        return comments;
+    }
+
+    public void setComments(Set<Comment> comments) {
+        this.comments = comments;
+    }
     // Remove the old categories list and its getters/setters
 
     // Add new getter and setter for single category
@@ -80,6 +90,14 @@ public class BlogPost {
         updatedAt = createdAt;
     }
     
+	 public int getLikesCount() {
+	        return likes.size();
+	    }
+
+	    public boolean isLikedBy(String username) {
+	        return likes.stream()
+	            .anyMatch(like -> like.getUser().getUsername().equals(username));
+	    }
     
     @PreUpdate
     protected void onUpdate() {

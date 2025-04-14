@@ -1,5 +1,7 @@
 package com.example.techblog.dto;
 
+import com.example.techblog.model.User;
+
 public class UserDto {
 	 private Long id;
 	 private String username;
@@ -26,5 +28,8 @@ public class UserDto {
 		this.username = username;
 	}
     
-
+	  public static UserDto fromEntity(User user) {
+	        if (user == null) return null;
+	        return new UserDto(user.getId(), user.getUsername());
+	    }
 }

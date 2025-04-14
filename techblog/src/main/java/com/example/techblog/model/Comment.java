@@ -27,6 +27,7 @@ public class Comment {
     @JoinColumn(name = "post_id")
     private BlogPost post;
     
+    
     public Long getId() {
 		return id;
 	}
