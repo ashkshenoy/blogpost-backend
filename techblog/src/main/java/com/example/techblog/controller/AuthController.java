@@ -3,6 +3,11 @@ package com.example.techblog.controller;
 import com.example.techblog.model.User;
 import com.example.techblog.repository.UserRepository;
 import com.example.techblog.security.JwtUtil;
+
+import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -26,10 +31,24 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public String register(@RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody @Valid User user) {
+        // Check if username already exists
+        if (repo.findByUsername(user.getUsername()) != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("Username already exists");
+        }
+        
+        // Check if email already exists
+        if (repo.findByEmail(user.getEmail()) != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("Email already exists");
+        }
+        
+        // Encode password and save user
         user.setPassword(encoder.encode(user.getPassword()));
         repo.save(user);
-        return "User registered!";
+        
+        return ResponseEntity.ok("User registered!");
     }
 
     @PostMapping("/login")
